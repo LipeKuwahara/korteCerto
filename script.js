@@ -94,6 +94,30 @@ function addRow(length = '', quantity = 1) {
 
     lengthInput.value = length;
 
+    // ATALHO ENTER: ADICIONAR PRÓXIMO ITEM
+
+    lengthInput.addEventListener('keydown', (event) => {
+
+        if (event.key === 'Enter') {
+
+            event.preventDefault();
+
+            const result = calculateLength(lengthInput.value);
+
+            if (result !== null) {
+                lengthInput.value = result;
+            }
+
+            addRow();
+
+            const inputs = cutRows.querySelectorAll('.piece-length');
+
+            inputs[inputs.length - 1].focus();
+
+        }
+
+    });
+
     // CALCULAR AO SAIR DO CAMPO
 
     lengthInput.addEventListener('blur', () => {
