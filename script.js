@@ -90,7 +90,7 @@ function addRow(length = '', quantity = 1) {
 
     groupInput.type = 'text';
 
-    groupInput.maxLength = 5;
+    groupInput.maxLength = 10;
 
     groupInput.placeholder = 'Ex.: A';
 
@@ -387,7 +387,7 @@ function optimizeCuts(cuts, stockLength, kerf) {
 
         for (let i = 1; i <= cut.quantity; i++) {
 
-            const assemblyId = `${cut.group}${i}`;
+            const assemblyId = `${cut.group} (${i})`;
 
             let remaining = cut.length;
 
