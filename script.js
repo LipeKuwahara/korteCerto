@@ -74,17 +74,58 @@ function calculateLength(value) {
 
 // ADICIONAR LINHA
 
+// ADICIONAR LINHA
+
 function addRow(length = '', quantity = 1) {
 
     const tr = document.createElement('tr');
+
+    // GRUPO
+
+    const groupCell = document.createElement('td');
+
+    const groupInput = document.createElement('input');
+
+    groupInput.className = 'piece-group';
+
+    groupInput.type = 'text';
+
+    groupInput.maxLength = 5;
+
+    groupInput.placeholder = 'Ex.: A';
+
+    // Gerar letras automaticamente
+
+    const rowCount = cutRows.querySelectorAll('tr').length;
+
+    function getGroupLetter(index) {
+
+        let result = '';
+
+        while (index >= 0) {
+
+            result = String.fromCharCode(index % 26 + 65) + result;
+
+            index = Math.floor(index / 26) - 1;
+
+        }
+
+        return result;
+
+    }
+
+    groupInput.value = getGroupLetter(rowCount);
+
+    groupCell.appendChild(groupInput);
+
+
+    // COMPRIMENTO
 
     const lengthCell = document.createElement('td');
 
     const lengthInput = document.createElement('input');
 
     lengthInput.className = 'piece-length';
-
-    // TEXT permite expressões como 8810 + 40.
 
     lengthInput.type = 'text';
 
@@ -93,32 +134,6 @@ function addRow(length = '', quantity = 1) {
     lengthInput.placeholder = 'Ex.: 1250 ou 8810 + 40';
 
     lengthInput.value = length;
-
-    // ATALHO ENTER: ADICIONAR PRÓXIMO ITEM
-
-    lengthInput.addEventListener('keydown', (event) => {
-
-        if (event.key === 'Enter') {
-
-            event.preventDefault();
-
-            const result = calculateLength(lengthInput.value);
-
-            if (result !== null) {
-                lengthInput.value = result;
-            }
-
-            addRow();
-
-            const inputs = cutRows.querySelectorAll('.piece-length');
-
-            inputs[inputs.length - 1].focus();
-
-        }
-
-    });
-
-    // CALCULAR AO SAIR DO CAMPO
 
     lengthInput.addEventListener('blur', () => {
 
@@ -137,6 +152,8 @@ function addRow(length = '', quantity = 1) {
     lengthCell.appendChild(lengthInput);
 
 
+    // QUANTIDADE
+
     const quantityCell = document.createElement('td');
 
     const quantityInput = document.createElement('input');
@@ -153,6 +170,8 @@ function addRow(length = '', quantity = 1) {
 
     quantityCell.appendChild(quantityInput);
 
+
+    // REMOVER
 
     const actionCell = document.createElement('td');
 
@@ -177,13 +196,54 @@ function addRow(length = '', quantity = 1) {
     actionCell.appendChild(removeButton);
 
 
-    tr.append(lengthCell, quantityCell, actionCell);
+    // ADICIONAR ELEMENTOS
+
+    tr.append(
+        groupCell,
+        lengthCell,
+        quantityCell,
+        actionCell
+    );
+
+
+    // EVENTOS DOS INPUTS
 
     tr.querySelectorAll('input').forEach(input => {
 
         input.addEventListener('input', updateTotals);
 
+        input.addEventListener('keydown', event => {
+
+            if (event.key === 'Enter') {
+
+                event.preventDefault();
+
+                const currentLength = calculateLength(
+                    lengthInput.value
+                );
+
+                if (currentLength === null) {
+
+                    lengthInput.focus();
+
+                    return;
+
+                }
+
+                lengthInput.value = currentLength;
+
+                addRow();
+
+                const inputs = cutRows.querySelectorAll('.piece-length');
+
+                inputs[inputs.length - 1].focus();
+
+            }
+
+        });
+
     });
+
 
     cutRows.appendChild(tr);
 
@@ -321,26 +381,40 @@ function optimizeCuts(cuts, stockLength, kerf) {
 
     const pieces = [];
 
-
-    // EXPANDIR QUANTIDADES E DIVIDIR COMPRIMENTOS
+    // CRIAR CONJUNTOS E SEGMENTOS
 
     cuts.forEach(cut => {
 
-        for (let i = 0; i < cut.quantity; i++) {
+        for (let i = 1; i <= cut.quantity; i++) {
+
+            const assemblyId = `${cut.group}${i}`;
 
             let remaining = cut.length;
 
-            while (remaining > stockLength) {
+            let segmentNumber = 1;
 
-                pieces.push(stockLength);
+            while (remaining > 0) {
 
-                remaining -= stockLength;
+                const segmentLength = Math.min(
+                    remaining,
+                    stockLength
+                );
 
-            }
+                pieces.push({
 
-            if (remaining > 0) {
+                    group: cut.group,
 
-                pieces.push(remaining);
+                    assemblyId,
+
+                    segmentNumber,
+
+                    length: segmentLength
+
+                });
+
+                remaining -= segmentLength;
+
+                segmentNumber++;
 
             }
 
@@ -351,29 +425,30 @@ function optimizeCuts(cuts, stockLength, kerf) {
 
     // ORDENAR DO MAIOR PARA O MENOR
 
-    pieces.sort((a, b) => b - a);
+    pieces.sort((a, b) => b.length - a.length);
 
 
     const bars = [];
 
 
-    // DISTRIBUIR PEÇAS NAS BARRAS
+    // DISTRIBUIR SEGMENTOS NAS BARRAS
 
     for (const piece of pieces) {
 
         let placed = false;
 
-        for (const bar of bars) {
+        const pieceKerf = piece.length >= stockLength
+            ? 0
+            : kerf;
 
-            const pieceKerf = piece >= stockLength
-                ? 0
-                : kerf;
+
+        for (const bar of bars) {
 
             const needed =
 
                 bar.pieceSum +
 
-                piece +
+                piece.length +
 
                 bar.kerfTotal +
 
@@ -384,7 +459,7 @@ function optimizeCuts(cuts, stockLength, kerf) {
 
                 bar.pieces.push(piece);
 
-                bar.pieceSum += piece;
+                bar.pieceSum += piece.length;
 
                 bar.kerfTotal += pieceKerf;
 
@@ -405,9 +480,9 @@ function optimizeCuts(cuts, stockLength, kerf) {
 
                 pieces: [piece],
 
-                pieceSum: piece,
+                pieceSum: piece.length,
 
-                kerfTotal: piece >= stockLength ? 0 : kerf
+                kerfTotal: pieceKerf
 
             });
 
@@ -416,37 +491,35 @@ function optimizeCuts(cuts, stockLength, kerf) {
     }
 
 
+    // RESULTADOS
+
     const totalStock = bars.length * stockLength;
 
     const totalPieces = pieces.reduce(
-        (sum, piece) => sum + piece,
+        (sum, piece) => sum + piece.length,
         0
     );
 
 
-    const resultBars = bars.map((bar, index) => {
+    const resultBars = bars.map((bar, index) => ({
 
-        return {
+        number: index + 1,
 
-            number: index + 1,
+        pieces: bar.pieces,
 
-            pieces: bar.pieces,
+        pieceSum: bar.pieceSum,
 
-            pieceSum: bar.pieceSum,
+        kerfTotal: bar.kerfTotal,
 
-            kerfTotal: bar.kerfTotal,
+        leftover:
 
-            leftover:
+            stockLength -
 
-                stockLength -
+            bar.pieceSum -
 
-                bar.pieceSum -
+            bar.kerfTotal
 
-                bar.kerfTotal
-
-        };
-
-    });
+    }));
 
 
     const totalLeftover = resultBars.reduce(
@@ -559,11 +632,15 @@ function renderResults(result, kerf) {
 
             segment.className = 'segment';
 
-            segment.style.flex = `${piece} 0 0`;
+            segment.style.flex = `${piece.length} 0 0`;
 
-            segment.title = `${fmt(piece)} mm`;
+            segment.title =
+                `${piece.assemblyId} · ` +
+                `Segmento ${piece.segmentNumber} · ` +
+                `${fmt(piece.length)} mm`;
 
-            segment.textContent = `${fmt(piece)}`;
+            segment.textContent =
+                `${piece.assemblyId} - ${fmt(piece.length)}`;
 
             segments.appendChild(segment);
 
@@ -635,48 +712,42 @@ document.getElementById('optimizeBtn').addEventListener('click', () => {
 
     for (const row of rows) {
 
+        const groupInput = row.querySelector('.piece-group');
+
+        const group = groupInput.value.trim().toUpperCase();
+
         const lengthInput = row.querySelector('.piece-length');
 
         const length = calculateLength(lengthInput.value);
 
         const quantity = Number(
-
             row.querySelector('.piece-quantity').value
-
         );
 
 
         if (
-
+            !group ||
             !Number.isFinite(length) ||
-
             length <= 0 ||
-
             !Number.isInteger(quantity) ||
-
             quantity <= 0
-
         ) {
 
             return showError(
-
-                'Preencha todos os comprimentos e quantidades ' +
-
-                'com valores válidos maiores que zero. ' +
-
-                'A quantidade deve ser inteira.'
-
+                'Preencha grupo, comprimento e quantidade corretamente.'
             );
 
         }
 
 
-        // ATUALIZAR O CAMPO COM O RESULTADO CALCULADO
+        groupInput.value = group;
 
         lengthInput.value = length;
 
 
         cuts.push({
+
+            group,
 
             length,
 
