@@ -90,7 +90,7 @@ function addRow(length = '', quantity = 1) {
 
     groupInput.type = 'text';
 
-    groupInput.maxLength = 10;
+    groupInput.maxLength = 5;
 
     groupInput.placeholder = 'Ex.: A';
 
