@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,214 +10,216 @@
 
 <body>
 
-<header class="topbar">
-    <div class="brand-mark">KC</div>
+    <header class="topbar">
+        <div class="brand-mark">KC</div>
 
-    <div>
-        <div class="brand">KORTE-CERTO <span>LINEAR</span></div>
-        <div class="tagline">Otimizador inteligente de cortes lineares</div>
-    </div>
+        <div>
+            <div class="brand">KORTE-CERTO <span>LINEAR</span></div>
+            <div class="tagline">Otimizador inteligente de cortes lineares</div>
+        </div>
 
-    <div class="status">
-        <i></i> Sistema pronto
-    </div>
-</header>
+        <div class="status">
+            <i></i> Sistema pronto
+        </div>
+    </header>
 
-<main class="container">
+    <main class="container">
 
-    <section class="intro">
-        <div class="eyebrow">OTIMIZAÇÃO DE MATERIAIS</div>
-        <h1>Plano de corte</h1>
-        <p>
-            Informe os comprimentos e as quantidades.
-            O sistema organiza os cortes para reduzir o desperdício.
-        </p>
-    </section>
+        <section class="intro">
+            <div class="eyebrow">OTIMIZAÇÃO DE MATERIAIS</div>
+            <h1>Plano de corte</h1>
+            <p>
+                Informe os comprimentos e as quantidades.
+                O sistema organiza os cortes para reduzir o desperdício.
+            </p>
+        </section>
 
-    <section class="workspace">
+        <section class="workspace">
 
-        <!-- LISTA DE CORTES -->
-        <section class="panel cuts-panel">
+            <!-- LISTA DE CORTES -->
+            <section class="panel cuts-panel">
 
-            <div class="panel-heading">
-                <div>
-                    <h2>Lista de cortes</h2>
-                    <p>Adicione cada medida necessária em milímetros.</p>
+                <div class="panel-heading">
+                    <div>
+                        <h2>Lista de cortes</h2>
+                        <p>Adicione cada medida necessária em milímetros.</p>
+                    </div>
+
+                    <span class="counter" id="lineCount">0 linhas</span>
                 </div>
 
-                <span class="counter" id="lineCount">0 linhas</span>
-            </div>
+                <div class="table-wrap">
 
-            <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>GRUPO</th>
+                                <th>COMPRIMENTO (MM)</th>
+                                <th>QUANTIDADE</th>
+                                <th></th>
+                            </tr>
+                        </thead>
 
-                <table>
-                    <thead>
-                        <tr>
-                            <th>GRUPO</th>
-                            <th>COMPRIMENTO (MM)</th>
-                            <th>QUANTIDADE</th>
-                            <th></th>
-                        </tr>
-                    </thead>
+                        <tbody id="cutRows"></tbody>
+                    </table>
 
-                    <tbody id="cutRows"></tbody>
-                </table>
+                    <div class="empty-state" id="emptyState">
+                        <div class="empty-icon">＋</div>
+                        <strong>Nenhum corte adicionado</strong>
+                        <span>Comece adicionando uma medida abaixo.</span>
+                    </div>
 
-                <div class="empty-state" id="emptyState">
-                    <div class="empty-icon">＋</div>
-                    <strong>Nenhum corte adicionado</strong>
-                    <span>Comece adicionando uma medida abaixo.</span>
                 </div>
 
-            </div>
+                <button class="add-btn" id="addRow" type="button">
+                    ＋ Adicionar linha de corte
+                </button>
 
-            <button class="add-btn" id="addRow" type="button">
-                ＋ Adicionar linha de corte
-            </button>
+                <button type="button" id="btnImportExcel" class="btn-import">
+                    IMPORTAR EXCEL
+                </button>
 
-            <div class="table-foot">
-                <span id="pieceCount">0 peças no total</span>
-                <span id="lengthTotal">0 mm lineares</span>
-            </div>
+                <input type="file" id="excelFileInput" accept=".xlsx,.xls,.csv" hidden>
+
+                <div class="table-foot">
+                    <span id="pieceCount">0 peças no total</span>
+                    <span id="lengthTotal">0 mm lineares</span>
+                </div>
+
+            </section>
+
+            <!-- CONFIGURAÇÕES -->
+            <aside class="panel settings-panel">
+
+                <div class="panel-heading">
+                    <div>
+                        <h2>Configurações</h2>
+                        <p>Defina a barra e o equipamento.</p>
+                    </div>
+
+                    <div class="settings-icon">⚙</div>
+                </div>
+
+                <label for="stockLength">Comprimento da barra</label>
+
+                <select id="stockLength">
+                    <option value="6000">6.000 mm</option>
+                    <option value="12000">12.000 mm</option>
+                    <option value="3000">3.000 mm</option>
+                    <option value="4000">4.000 mm</option>
+                    <option value="custom">Personalizado</option>
+                </select>
+
+                <input id="customLength" class="custom-input hidden" type="number" min="1"
+                    placeholder="Comprimento em mm">
+
+                <label for="sawModel">Modelo da serra</label>
+
+                <select id="sawModel">
+                    <option value="disco_fino" data-kerf="2">
+                        Disco fino — 2 mm
+                    </option>
+
+                    <option value="disco_convencional" data-kerf="3">
+                        Disco convencional — 3 mm
+                    </option>
+
+                    <option value="serra_fita_08" data-kerf="0.8">
+                        Serra de fita — 0,8 mm
+                    </option>
+
+                    <option value="serra_fita_12" data-kerf="1.2">
+                        Serra de fita — 1,2 mm
+                    </option>
+
+                    <option value="personalizada">
+                        Personalizada
+                    </option>
+                </select>
+
+                <div id="customKerfWrap" class="custom-kerf hidden">
+
+                    <label for="customKerf">Perda por corte (mm)</label>
+
+                    <input id="customKerf" type="number" min="0" step="0.1" value="2">
+
+                </div>
+
+                <div class="info-box">
+                    <span>ⓘ</span>
+                    <p>
+                        A perda configurada da serra será considerada
+                        no cálculo de cada peça.
+                    </p>
+                </div>
+
+                <button class="optimize-btn" id="optimizeBtn">
+                    OTIMIZAR CORTES <span>↗</span>
+                </button>
+
+                <div class="small-note">
+                    O cálculo utiliza os dados informados nesta tela.
+                </div>
+
+            </aside>
 
         </section>
 
-        <!-- CONFIGURAÇÕES -->
-        <aside class="panel settings-panel">
+        <!-- RESULTADOS -->
+        <section class="results hidden" id="results">
 
-            <div class="panel-heading">
+            <div class="results-title">
                 <div>
-                    <h2>Configurações</h2>
-                    <p>Defina a barra e o equipamento.</p>
+                    <div class="eyebrow">RESULTADO</div>
+                    <h2>Plano de corte otimizado</h2>
                 </div>
 
-                <div class="settings-icon">⚙</div>
+                <button class="print-btn" id="printBtn">
+                    Imprimir plano
+                </button>
             </div>
 
-            <label for="stockLength">Comprimento da barra</label>
-
-            <select id="stockLength">
-                <option value="6000">6.000 mm</option>
-                <option value="12000">12.000 mm</option>
-                <option value="3000">3.000 mm</option>
-                <option value="4000">4.000 mm</option>
-                <option value="custom">Personalizado</option>
-            </select>
-
-            <input
-                id="customLength"
-                class="custom-input hidden"
-                type="number"
-                min="1"
-                placeholder="Comprimento em mm"
-            >
-
-            <label for="sawModel">Modelo da serra</label>
-
-            <select id="sawModel">
-                <option value="disco_fino" data-kerf="2">
-                    Disco fino — 2 mm
-                </option>
-
-                <option value="disco_convencional" data-kerf="3">
-                    Disco convencional — 3 mm
-                </option>
-
-                <option value="serra_fita_08" data-kerf="0.8">
-                    Serra de fita — 0,8 mm
-                </option>
-
-                <option value="serra_fita_12" data-kerf="1.2">
-                    Serra de fita — 1,2 mm
-                </option>
-
-                <option value="personalizada">
-                    Personalizada
-                </option>
-            </select>
-
-            <div id="customKerfWrap" class="custom-kerf hidden">
-
-                <label for="customKerf">Perda por corte (mm)</label>
-
-                <input
-                    id="customKerf"
-                    type="number"
-                    min="0"
-                    step="0.1"
-                    value="2"
-                >
-
-            </div>
-
-            <div class="info-box">
-                <span>ⓘ</span>
-                <p>
-                    A perda configurada da serra será considerada
-                    no cálculo de cada peça.
-                </p>
-            </div>
-
-            <button class="optimize-btn" id="optimizeBtn">
-                OTIMIZAR CORTES <span>↗</span>
+            <button type="button" id="btnPrintLabels" class="btn-import">
+                IMPRIMIR ETIQUETAS
             </button>
 
-            <div class="small-note">
-                O cálculo utiliza os dados informados nesta tela.
+            <div class="metrics">
+
+                <div class="metric">
+                    <span>BARRAS UTILIZADAS</span>
+                    <strong id="barMetric">—</strong>
+                </div>
+
+                <div class="metric">
+                    <span>APROVEITAMENTO DAS PEÇAS</span>
+                    <strong id="useMetric">—</strong>
+                </div>
+
+                <div class="metric">
+                    <span>SOBRA TOTAL</span>
+                    <strong id="leftMetric">—</strong>
+                </div>
+
             </div>
 
-        </aside>
+            <div id="barPlans" class="bar-plans"></div>
 
-    </section>
+            <p class="method-note" id="methodNote"></p>
 
-    <!-- RESULTADOS -->
-    <section class="results hidden" id="results">
+        </section>
 
-        <div class="results-title">
-            <div>
-                <div class="eyebrow">RESULTADO</div>
-                <h2>Plano de corte otimizado</h2>
-            </div>
+        <div class="error hidden" id="errorBox" role="alert"></div>
 
-            <button class="print-btn" id="printBtn">
-                Imprimir plano
-            </button>
-        </div>
+    </main>
 
-        <div class="metrics">
+    <footer>
+        CORTE-CERTO LINEAR <span>•</span> Otimização de cortes <span>•</span> Developer: LipeKuwahara
+    </footer>
 
-            <div class="metric">
-                <span>BARRAS UTILIZADAS</span>
-                <strong id="barMetric">—</strong>
-            </div>
-
-            <div class="metric">
-                <span>APROVEITAMENTO DAS PEÇAS</span>
-                <strong id="useMetric">—</strong>
-            </div>
-
-            <div class="metric">
-                <span>SOBRA TOTAL</span>
-                <strong id="leftMetric">—</strong>
-            </div>
-
-        </div>
-
-        <div id="barPlans" class="bar-plans"></div>
-
-        <p class="method-note" id="methodNote"></p>
-
-    </section>
-
-    <div class="error hidden" id="errorBox" role="alert"></div>
-
-</main>
-
-<footer>
-    CORTE-CERTO LINEAR <span>•</span> Otimização de cortes <span>•</span> Developer: LipeKuwahara
-</footer>
-
-<script src="script.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <script src="https://unpkg.com/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+    <script src="script.js"></script>
 
 </body>
+
 </html>

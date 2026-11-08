@@ -634,10 +634,12 @@ function renderResults(result, kerf) {
 
             segment.style.flex = `${piece.length} 0 0`;
 
+            segment.dataset.assembly = piece.assemblyId;
+            segment.dataset.segment = piece.segmentNumber;
+            segment.dataset.length = piece.length;
+
             segment.title =
-                `${piece.assemblyId} · ` +
-                `Segmento ${piece.segmentNumber} · ` +
-                `${fmt(piece.length)} mm`;
+                `${piece.assemblyId} · Segmento ${piece.segmentNumber} · ${fmt(piece.length)} mm`;
 
             segment.textContent =
                 `${piece.assemblyId} - ${fmt(piece.length)}`;
@@ -863,3 +865,326 @@ document.getElementById('addRow').addEventListener(
 );
 
 addRow();
+
+// ==========================================
+// IMPORTAÇÃO DE PLANILHAS - CORTE-CERTO
+// ==========================================
+
+const importButton = document.getElementById('btnImportExcel');
+const excelFileInput = document.getElementById('excelFileInput');
+
+let importedCuts = [];
+
+
+// Abrir seletor de arquivos
+importButton.addEventListener('click', () => {
+    excelFileInput.click();
+});
+
+
+// Selecionar arquivo
+excelFileInput.addEventListener('change', async (event) => {
+
+    const file = event.target.files[0];
+
+    if (!file) return;
+
+    if (typeof XLSX === 'undefined') {
+        alert('A biblioteca de leitura do Excel não foi carregada.');
+        return;
+    }
+
+    try {
+
+        const data = await file.arrayBuffer();
+
+        const workbook = XLSX.read(data, {
+            type: 'array'
+        });
+
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+
+        const rows = XLSX.utils.sheet_to_json(firstSheet, {
+            defval: '',
+            raw: false
+        });
+
+        if (!rows.length) {
+            throw new Error('A planilha está vazia.');
+        }
+
+        importedCuts = processExcelData(rows);
+
+        if (!importedCuts.length) {
+            throw new Error('Nenhum registro válido foi encontrado.');
+        }
+
+        const action = prompt(
+            `Arquivo: ${file.name}\n` +
+            `Registros encontrados: ${importedCuts.length}\n\n` +
+            `Digite:\n` +
+            `1 - Adicionar à lista atual\n` +
+            `2 - Substituir a lista atual\n` +
+            `0 - Cancelar`
+        );
+
+        if (action === '1') {
+
+            insertImportedCuts(false);
+
+        } else if (action === '2') {
+
+            insertImportedCuts(true);
+
+        }
+
+    } catch (error) {
+
+        alert('Erro na importação:\n' + error.message);
+
+    }
+
+    // Permite importar novamente o mesmo arquivo
+    excelFileInput.value = '';
+
+});
+
+
+// Normalizar nomes das colunas
+function normalizeHeader(value) {
+
+    return String(value)
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, '');
+
+}
+
+
+// Identificar colunas e validar registros
+function processExcelData(rows) {
+
+    const firstRow = rows[0];
+
+    const headers = Object.keys(firstRow);
+
+    const findColumn = (possibilities) => {
+
+        return headers.find(header =>
+            possibilities.includes(normalizeHeader(header))
+        );
+
+    };
+
+    const groupColumn = findColumn([
+        'GRUPO',
+        'GROUP',
+        'IDENTIFICACAO'
+    ]);
+
+    const lengthColumn = findColumn([
+        'COMPRIMENTO',
+        'LENGTH',
+        'TAMANHO'
+    ]);
+
+    const quantityColumn = findColumn([
+        'QUANTIDADE',
+        'QTD',
+        'QTDE',
+        'QUANTITY'
+    ]);
+
+    if (!lengthColumn || !quantityColumn) {
+        throw new Error(
+            'Não foi possível identificar as colunas de comprimento e quantidade.'
+        );
+    }
+
+    const result = [];
+
+    const usedGroups = new Set();
+
+    rows.forEach((row, index) => {
+
+        const lengthValue = String(row[lengthColumn]).trim();
+        const quantityValue = String(row[quantityColumn]).trim();
+
+        // Ignorar linhas completamente vazias
+        if (!lengthValue && !quantityValue) return;
+
+        const group = groupColumn
+            ? String(row[groupColumn]).trim().toUpperCase()
+            : '';
+
+        const length = calculateLength(lengthValue);
+
+        const quantity = Number(quantityValue.replace(',', '.'));
+
+        if (!group) {
+            throw new Error(`Grupo não informado na linha ${index + 2}.`);
+        }
+
+        if (!lengthValue || !Number.isFinite(length) || length <= 0) {
+            throw new Error(`Comprimento inválido na linha ${index + 2}.`);
+        }
+
+        if (
+            !Number.isInteger(quantity) ||
+            quantity <= 0
+        ) {
+            throw new Error(`Quantidade inválida na linha ${index + 2}.`);
+        }
+
+        if (usedGroups.has(group)) {
+            throw new Error(
+                `O grupo "${group}" está duplicado na planilha.`
+            );
+        }
+
+        usedGroups.add(group);
+
+        result.push({
+            group,
+            length,
+            quantity
+        });
+
+    });
+
+    return result;
+
+}
+
+
+// Inserir os dados na tabela
+function insertImportedCuts(replaceExisting) {
+
+    // Localizar as linhas atuais
+    const existingRows = Array.from(
+        document.querySelectorAll('.piece-group')
+    ).map(input => input.closest('tr'));
+
+    // Substituir dados existentes
+    if (replaceExisting) {
+
+        existingRows.forEach(row => row.remove());
+
+    }
+
+    // Inserir novos registros
+    importedCuts.forEach(cut => {
+
+        addRow();
+
+        const rows = document.querySelectorAll('.piece-group');
+
+        const lastRow = rows[rows.length - 1].closest('tr');
+
+        lastRow.querySelector('.piece-group').value = cut.group;
+
+        lastRow.querySelector('.piece-length').value = cut.length;
+
+        lastRow.querySelector('.piece-quantity').value = cut.quantity;
+
+    });
+
+    // Atualizar indicadores
+    updateTotals();
+
+    alert(
+        `${importedCuts.length} registro(s) importado(s) com sucesso!`
+    );
+
+}
+
+// ==========================================
+// IMPRESSÃO DE ETIQUETAS - CORTE-CERTO
+// ==========================================
+
+document.getElementById('btnPrintLabels')
+    .addEventListener('click', printPieceLabels);
+
+
+function printPieceLabels() {
+
+    if (!window.jspdf) {
+        alert('A biblioteca PDF não foi carregada. Verifique sua conexão.');
+        return;
+    }
+
+    const segments = document.querySelectorAll(
+        '.segment[data-assembly]'
+    );
+
+    if (!segments.length) {
+        alert('Nenhuma peça encontrada. Execute a otimização primeiro.');
+        return;
+    }
+
+    const { jsPDF } = window.jspdf;
+
+    // Etiqueta de 100 x 50 mm
+    const doc = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: [100, 50]
+    });
+
+    const labels = Array.from(segments);
+
+    labels.forEach((element, index) => {
+
+        const assembly = element.dataset.assembly;
+        const segment = element.dataset.segment;
+        const length = Number(element.dataset.length);
+
+        if (index > 0) {
+            doc.addPage([100, 50], 'landscape');
+        }
+
+        // Borda da etiqueta
+        doc.setLineWidth(0.4);
+        doc.rect(2, 2, 96, 46);
+
+        // Identificação do conjunto
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(25);
+
+        doc.text(assembly, 50, 17, {
+            align: 'center'
+        });
+
+        // Separador
+        doc.setLineWidth(0.3);
+        doc.line(10, 21, 90, 21);
+
+        // Número do segmento
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(13);
+
+        doc.text(
+            `SEGMENTO: ${segment}`,
+            50,
+            30,
+            { align: 'center' }
+        );
+
+        // Comprimento
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(17);
+
+        doc.text(
+            `${length.toLocaleString('pt-BR')} mm`,
+            50,
+            41,
+            { align: 'center' }
+        );
+
+    });
+
+    doc.save('Etiquetas_Corte-Certo.pdf');
+
+}
